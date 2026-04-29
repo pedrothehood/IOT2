@@ -1,5 +1,5 @@
 // 10.4.2026
-// Produktivversion Sensor XIAO-ESP32-C3-BAS01 ohne Ethernet DHT22-Wärmesensor, OTA,Telnet, SSL,
+// Produktivversion Sensor DHT_ETH-02 WT32-ETH01 mit Ethernet DHT22-Wärmesensor, OTA,Telnet, SSL,
 // diverse Dienste OFF, Sleep
 // Upload: damit der Upload über OTA/Ethernet funktioniert, muss auf dem Server "Sleep" deaktiviert werden,
 // Gerät vom Strom nehmen, dann wird die normale loop-Schlaufe mit OTA korrekt durchlaufen und
@@ -20,15 +20,14 @@
 // BluetoothSerial SerialBT;
 /* 29.3.2026 Webserver B */
 // String webServerActive = "X";
-//#include <WebServer_WT32_ETH01.h>
-#include <WebServer.h>
+#include <WebServer_WT32_ETH01.h>
 #include <Preferences.h>
 Preferences prefs;
 WebServer server(80);
 
 bool forceConfig = false; // für WLAN-"Schirm" des ESP32
 // Physischer Button (Zieht gegen GND)
-#define CONFIG_BUTTON_PIN 7  // D5 oder GPIO7
+#define CONFIG_BUTTON_PIN 32
 
 // Variablen zum Zwischenspeichern der Werte
 String sensorid, apiKey, ssid, password, servername, mac;
@@ -190,25 +189,35 @@ void debugLog(String msg)
 /* Telnet E*/
 
 // Ethernet Pins für WT32-ETH01 (Core 3.x) geht nicht mit Core 3.x
+/*#define ETH_ADDR 1
+#define ETH_POWER_PIN 16
+#define ETH_MDC_PIN 23
+#define ETH_MDIO_PIN 18  */
 
-/*#define ETH_PHY_TYPE ETH_PHY_LAN8720 // Das ist der richtige TYP
+#define ETH_PHY_TYPE ETH_PHY_LAN8720 // Das ist der richtige TYP
 #define ETH_PHY_ADDR 1
 #define ETH_MDC_PIN 23
 #define ETH_MDIO_PIN 18
 #define ETH_POWER_PIN 16 // Dein Pin (bleibt ein int)
-#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN */
+#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
 
-
+// Korr. 29.3.2026: Definieren der WT32-ETH01 spezifischen Pins
+// geht auch nicht:
+/*#define ETH_PHY_ADDR  1
+#define ETH_PHY_POWER 16 // Der Oszillator wird über GPIO 16 aktiviert
+#define ETH_PHY_MDC   23
+#define ETH_PHY_MDIO  18
+#define ETH_PHY_TYPE  ETH_PHY_LAN8720
+#define ETH_CLK_MODE  ETH_CLOCK_GPIO0_IN // GPIO0 ist der Takteingang   */
 
 // DHT22 Konfiguration
-#define DHTPIN 3 // GPIO 03 D1 für den DHT22 Sensor
+#define DHTPIN 15 // GPIO 15 für den DHT22 Sensor
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
 // Webservice URLs (Beispiele)
 const char *get_url = "http://worldtimeapi.org";
 const char *post_url = "http://dein-webserver.de";
-const int httpsPort = 443; // HTTPS Por
 
 unsigned long lastUpdate = 0;
 long interval = 10000; // Alle 10 Sekunden senden
@@ -219,6 +228,20 @@ void setup()
   Serial.begin(115200);
   debugLog("Serial Start von Pedro");
   // 1. NimBLE initialisieren
+  /*
+  NimBLEDevice::init("WT32_NimBLE_Debug");
+  NimBLEServer *pServer = NimBLEDevice::createServer();
+  NimBLEService *pService = pServer->createService(SERVICE_UUID);
+
+  // Characteristic mit "Notify" (für Echtzeit-Updates) erstellen
+  pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      NIMBLE_PROPERTY::NOTIFY
+                    );
+
+  pService->start();
+  pServer->getAdvertising()->start();
+  Serial.println("BLE Debugging bereit..."); */
 
   // Bluetooth Name festlegen
   // SerialBT.begin("WT32_Debug_Schnittstelle");
@@ -243,9 +266,11 @@ void setup()
   dht.begin();
 
   // Ethernet initialisieren
+  /* if (!ETH.begin(ETH_PHY_TYPE, ETH_PHY_ADDR, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_POWER_PIN, ETH_CLK_MODE)) {
+    Serial.println("ETH Fehler!");
+  } */
   if (!forceConfig)
   { // new
-    /*
     debugLog("Versuche, Ethernet zu starten...");
     if (!ETH.begin(1, 16, 23, 18, ETH_PHY_LAN8720, ETH_CLOCK_GPIO0_IN))
     {
@@ -260,17 +285,15 @@ void setup()
       delay(500);
       Serial.print(".");
     }
-  */
-    /*if (ETH.linkUp())
+    if (ETH.linkUp())
     { // neuer Code
       debugLog("Ethernet OK!  ");
-      // debugLog(ETH.localIP()); 
+      // debugLog(ETH.localIP());
     }
     else
-    {  */
+    {
       // 2. WiFi versuchen
-      unsigned long start = millis();
-      debugLog("Versuche WiFi...");
+      debugLog("Ethernet fehlgeschlagen. Versuche WiFi...");
       // String s = prefs.getString("ssid", "");
       // String p = prefs.getString("pass", "");
       getPreferences();
@@ -287,7 +310,7 @@ void setup()
         while (WiFi.status() != WL_CONNECTED && millis() - start < 8000)
         {
           delay(500);
-          debugLog(".");
+          debugLog("W.");
         }
 
         if (WiFi.status() != WL_CONNECTED)
@@ -309,7 +332,7 @@ void setup()
       {
         forceConfig = true;
       }
-   // } // Marke löschen
+    }
 
     // Serial.println("\nVerbunden! IP: " + ETH.localIP().toString());
 
@@ -340,7 +363,7 @@ void setup()
     startConfigPortal();
   }
   // OTA Setup
-  ArduinoOTA.setHostname("XIAO-ESP32-C3-Knoten");
+  ArduinoOTA.setHostname("WT32-ETH01-Knoten");
   ArduinoOTA.begin();
 }
 
@@ -367,8 +390,8 @@ void loop()
      // getPreferences();
    }  */
   getPreferences(); // auf jeden Fall lesen
-  static String strServerName = "https://" + servername + "/" + "post-data.php";
-  static String strServerNameFirst = "https://" + servername + "/" + "get-sensoriddata.php?sensorid=" + sensorid;
+  static String strServerName = servername + "/" + "post-data.php";
+  static String strServerNameFirst = servername + "/" + "get-sensoriddata.php?sensorid=" + sensorid;
   serverName = strServerName.c_str();           // Dem Pointer jetzt die Adresse zuweisen
   serverNameFirst = strServerNameFirst.c_str(); // Dem Pointer jetzt die Adresse zuweisen
   apiKeyValue = apiKey;                         // aus den Preferences
@@ -405,12 +428,11 @@ void loop()
     // WiFiClient client; // Benötigt für HTTPClient
     // HTTPClient http;
 
-    //WiFiClientSecure *client = new WiFiClientSecure; // SSL
+    WiFiClientSecure *client = new WiFiClientSecure; // SSL
                                                      // Original-Code alt:  std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
-// 1. Client lokal erstellen (sicherer gegen Speicherlecks)
-WiFiClientSecure client;
+
     // Ignore SSL certificate validation
-    client.setInsecure();
+    client->setInsecure();
 
     // create an HTTPClient instance
     HTTPClient https;
@@ -421,7 +443,7 @@ WiFiClientSecure client;
     debugLog(strServerNameFirst);
     // http.begin(client, get_url);
     // http.begin(client, serverNameFirst);
-    https.begin(client, serverNameFirst); // SSL
+    https.begin(*client, serverNameFirst); // SSL
     int httpCodeGet = https.GET();
     if (httpCodeGet > 0)
     {
@@ -477,20 +499,14 @@ WiFiClientSecure client;
 
       // temporär auskommentiert!!!! interval = delaytsec;    // Wichtig: setzt das aktuelle Intervall vom Server
       interval = delaytsec; // Wichtig: setzt das aktuelle Intervall vom Server
-    }else
-    {
-      String fehlermeldung = String(https.errorToString(httpCodeGet).c_str());
-      //Serial.printf("GET Fehler: %s\n", https.errorToString(httpCodeGet).c_str());
-      debugLog("GET Fehler: " + fehlermeldung + "\n");
     }
-
     https.end();
 
     // 3. Sensordaten per POST senden
 
     if (strStatus == "Aktiv")
     {
-      https.begin(client, serverName);
+      https.begin(*client, serverName);
 
       Serial.println("POST Request...");
       debugLog("POST Request...");
