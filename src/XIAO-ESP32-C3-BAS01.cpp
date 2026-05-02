@@ -59,7 +59,7 @@ void handleRoot()
     */
   getPreferences();
 
-  String html = "<html><head><meta charset='UTF-8'><style>";
+  /* String html = "<html><head><meta charset='UTF-8'><style>";
   html += "body { font-family: sans-serif; margin: 20px; }";
   html += "label { display: inline-block; width: 120px; margin-bottom: 10px; }";
   html += "input { margin-bottom: 10px; padding: 5px; }";
@@ -77,6 +77,33 @@ void handleRoot()
   html += "<br><input type='submit' value='Speichern und Neustarten'>";
   html += "</form></body></html>";
 
+  server.send(200, "text/html", html); */
+
+ String html = "<html><head><meta charset='UTF-8'><style>";
+  html += "body { font-family: sans-serif; margin: 0; padding: 0; background-color: #FFFFFF; display: flex; justify-content: center; align-items: center; height: 100vh; }";
+  html += ".container { max-width: 80%; padding: 20px; background-color: #F5F5F5; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-radius: 8px; text-align: center; width: 100%; }";
+  html += "h1 { text-align: center; color: #333; font-size: 53.76px; margin-bottom: 11.2px; }"; // 30% kleiner als vorher
+  html += "label { display: block; width: 100%; margin-bottom: 24px; color: #333; font-weight: bold; font-size: 48px; }"; // Doppelter Schriftgrößenwert
+  html += "input { display: block; width: 100%; padding: 40px; margin-bottom: 24px; border: 2px solid #CCCCCC; border-radius: 16px; box-sizing: border-box; font-size: 48px; }"; // Doppelter Schriftgrößenwert
+  html += "input[type='submit'] { background-color: #007BFF; color: white; padding: 60px 120px; font-size: 36px; border: none; border-radius: 16px; cursor: pointer; width: 100%; }"; // Doppelter Schriftgrößenwert
+  html += "</style></head><body>";
+  html += "<div class='container'>";
+  html += "<h1>Geräte-Konfiguration</h1>";
+  html += "<form action='/save' method='POST'>";
+
+  html += "<label>Sensor-ID:</label> <input type='text' name='sensorid' value='" + sensorid + "'><br>";
+  html += "<label>API-Key:</label> <input type='password' name='apiKey' value='" + apiKey + "'><br>";
+  html += "<label>SSID:</label> <input type='text' name='ssid' value='" + ssid + "'><br>";
+  html += "<label>Passwort:</label> <input type='password' name='password' value='" + password + "'><br>";
+  html += "<label>Servername:</label> <input type='text' name='servername' value='" + servername + "'><br>";
+  html += "<label>Macadresse:</label> <input type='text' name='mac' value='" + WiFi.macAddress() + "' readonly ><br>";
+
+  html += "<br><input type='submit' value='Speichern und Neustarten'>";
+  html += "</form></div></body></html>";
+
+
+
+ 
   server.send(200, "text/html", html);
 }
 
@@ -106,7 +133,7 @@ void handleSave()
 
 void startConfigPortal()
 {
-  Serial.println("Starte Config Portal (AP: WT32_SETUP)...");
+  Serial.println("Starte Config Portal (AP: ESP32-C3_SETUP)...");
   WiFi.mode(WIFI_AP);
   WiFi.softAP("WT32_SETUP");
 
